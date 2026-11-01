@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Attendance Calculator</title>
+<style>
+:root{--bg:#f5f6fa;--card:#fff;--tx:#1b1d29;--mut:#6b7080;--bd:#e2e4ee;--ac:#4f46e5;--ok:#15803d;--okb:#dcfce7;--bad:#b91c1c;--badb:#fee2e2;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12131a;--card:#1c1e2a;--tx:#eceefb;--mut:#9a9fb5;--bd:#2d3042;--ac:#818cf8;--ok:#86efac;--okb:#14532d;--bad:#fca5a5;--badb:#7f1d1d;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#12131a;--card:#1c1e2a;--tx:#eceefb;--mut:#9a9fb5;--bd:#2d3042;--ac:#818cf8;--ok:#86efac;--okb:#14532d;--bad:#fca5a5;--badb:#7f1d1d;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.w{max-width:480px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:8px 0 2px}
+.sub{color:var(--mut);font-size:14px;margin:0 0 14px}
+.c{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:14px;margin-bottom:12px}
+h2{font-size:15px;margin:0 0 10px;color:var(--ac)}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:12px;color:var(--mut);margin-bottom:4px}
+input{width:100%;font-size:17px;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--tx)}
+.big{font-size:40px;font-weight:700;margin:4px 0}
+.pill{display:inline-block;padding:8px 12px;border-radius:10px;font-size:14px;font-weight:600;margin-top:6px}
+.ok{background:var(--okb);color:var(--ok)}.bad{background:var(--badb);color:var(--bad)}
+.bar{height:10px;background:var(--bd);border-radius:6px;overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:var(--ac);width:0;transition:width .3s}
+p{margin:6px 0;font-size:14px;line-height:1.45}
+.mut{color:var(--mut)}
+</style>
+</head>
+<body>
+<div class="w">
+<h1>📚 Attendance Calculator</h1>
+<p class="sub">How many classes you can skip, and what your attendance will be after a leave</p>
+
+<div class="c">
+<h2>Current attendance</h2>
+<div class="g">
+<div><label>Total classes held</label><input id="t" type="number" inputmode="numeric" min="0" value="100"></div>
+<div><label>Classes attended</label><input id="a" type="number" inputmode="numeric" min="0" value="80"></div>
+</div>
+<div style="margin-top:10px"><label>Required attendance (%)</label><input id="r" type="number" inputmode="numeric" min="1" max="100" value="75"></div>
+<div class="big" id="cur">–</div>
+<div class="bar"><i id="barf"></i></div>
+<div id="curmsg"></div>
+</div>
+
+<div class="c">
+<h2>🏖️ Attendance after leave</h2>
+<div class="g">
+<div><label>Days of leave</label><input id="d" type="number" inputmode="numeric" min="0" value="3"></div>
+<div><label>Classes per day</label><input id="p" type="number" inputmode="numeric" min="1" value="5"></div>
+</div>
+<div id="leave"></div>
+</div>
+
+<div class="c">
+<h2>🎯 Till end of semester</h2>
+<label>Remaining classes (optional)</label>
+<input id="m" type="number" inputmode="numeric" min="0" placeholder="e.g. 60">
+<div id="sem"></div>
+</div>
+<p class="mut" style="text-align:center;margin-top:18px">Developed by <b>Ritik Kumar</b></p>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const n=id=>Math.max(0,parseFloat($(id).value)||0);
+const f=x=>(Math.round(x*100)/100).toString();
+function calc(){
+  const t=n('t'),a=Math.min(n('a'),t),r=Math.min(n('r'),100);
+  const cur=t?a/t*100:0;
+  $('cur').textContent=t?f(cur)+'%':'–';
+  $('barf').style.width=Math.min(cur,100)+'%';
+  let h='';
+  if(!t){h='<p class="mut">Enter total classes.</p>'}
+  else if(r>=100){
+    h=a===t?'<span class="pill ok">You cannot skip any class (100% required)</span>':'<span class="pill bad">100% is no longer possible</span>';
+  } else if(cur>=r){
+    const b=Math.floor((a*100-r*t)/r+1e-9);
+    h='<span class="pill ok">✅ You can skip '+b+' class(es) right now</span><p class="mut">You will stay above '+r+'% even after skipping these.</p>';
+  } else {
+    const need=Math.ceil((r*t-100*a)/(100-r)-1e-9);
+    h='<span class="pill bad">⚠️ Attend '+need+' class(es) in a row</span><p class="mut">Then you will reach '+r+'%.</p>';
+  }
+  $('curmsg').innerHTML=h;
+
+  const L=n('d')*n('p');
+  if(t&&L>=0){
+    const np=a/(t+L)*100;
+    const ok=np>=r;
+    $('leave').innerHTML='<p>'+L+' class(es) will be missed → total '+(t+L)+' classes</p><div class="big">'+f(np)+'%</div><span class="pill '+(ok?'ok':'bad')+'">'+(ok?'✅ '+r+'% or above, safe!':'❌ Below '+r+'% ('+f(r-np)+'% short)')+'</span>'+(ok?'':'<p class="mut">Take a shorter leave, or attend extra classes later.</p>');
+  }
+
+  const m=n('m');
+  if(!t||!m){$('sem').innerHTML='<p class="mut">Enter the remaining classes to see how many you can skip by the end of the semester.</p>'}
+  else{
+    const T=t+m,best=(a+m)/T*100;
+    if(best<r-1e-9){$('sem').innerHTML='<span class="pill bad">❌ Even attending every class, you will only reach '+f(best)+'%</span>'}
+    else{
+      const b=Math.min(m,Math.floor(a+m-r*T/100+1e-9));
+      const fin=(a+m-b)/T*100;
+      $('sem').innerHTML='<span class="pill ok">Max '+b+' skips allowed (out of '+m+' remaining)</span><p class="mut">'+b+' skips, final attendance: '+f(fin)+'%. If you attend all, it will be '+f(best)+'%.</p>';
+    }
+  }
+}
+['t','a','r','d','p','m'].forEach(i=>$(i).addEventListener('input',calc));
+calc();
+</script>
+</body>
+</html>
